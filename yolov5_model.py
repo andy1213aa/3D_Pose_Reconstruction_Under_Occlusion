@@ -24,7 +24,7 @@ class yolov5_model():
                         path=video_infomation['yolov5_path'], 
                         source='local')
 
-        self.model.conf = 0.25         # NMS confidence threshold
+        self.model.conf = 0.7         # NMS confidence threshold
         self.model.iou = 0.45          # NMS IoU threshold
         self.model.agnostic = False    # NMS class-agnostic
         self.model.multi_label = False # NMS multiple labels per box
@@ -32,12 +32,11 @@ class yolov5_model():
         self.model.max_det = 1000      # maximum number of detections per image
         self.model.amp = False         # Automatic Mixed Precision (AMP) inference
 
-    
+  
     def __call__(self, frames):
 
         res = np.zeros((len(frames)))
         # Maybe try to not move to cpu.
-        
         gpu_out = self.model(frames).xyxy
         cpu_out = []
 

@@ -13,7 +13,7 @@ from yolov5_model import yolov5_model
 from scipy import stats
 import glob
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-
+import utlis
 
 def measureExcutionTime(func):
     @wraps(func)
@@ -106,7 +106,9 @@ class scene():
         self.pose2D = Kpts2D_Model(self.cfg['config_path'],
                             self.cfg['ckpt_path'],
                             self.cfg['smooth_cfg'],
-                            self.cfg['cuda_idx'])
+                            self.show_kpt2D,
+                            self.cfg['cuda_idx'],
+                            )
 
         print('Pose 2D detection model is loaded.')
 
@@ -249,7 +251,7 @@ class scene():
         distribution = load_distribution('Unified')
         skel = getskel()
         self.pictoStruct = getPictoStruct(skel, distribution)
-
+    
     def init_scene3D(self):
 
         self.fig = plt.figure()
@@ -314,10 +316,6 @@ class scene():
                     image_nparray.append(camera.read())
 
                 self.show_images = image_nparray.copy()
-            merge_multi_view = np.zeros((int(np.ceil(self.cam_nums/merge_col_num) * merge_singleView_height), 
-                                        merge_col_num * merge_singleView_width, 3), 
-                                        dtype='uint8')
-
             print('---------------------------------------')
             print(f'Frame num: {self.frame_num}')
             
@@ -339,21 +337,15 @@ class scene():
                     cv2.putText(view, f'FPS: {fps}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 1, cv2.LINE_AA)
 
                 self.cameras[i].now_frame = view
-                row_idx = i // 2 
-                col_idx = i % 2
-
-                _view = cv2.resize(view, 
-                                    (merge_singleView_width, merge_singleView_height), 
-                                    interpolation=cv2.INTER_NEAREST)
-
-                merge_multi_view[row_idx*merge_singleView_height:(row_idx+1)*merge_singleView_height, 
-                                col_idx*merge_singleView_width:(col_idx+1)*merge_singleView_width] = _view
             
+            merge_multi_view = utlis.merge_images(self.show_images, merge_col_num, merge_singleView_height, merge_singleView_width)
+
             if self.record_result:
                 MV.write(merge_multi_view)
 
             if self.show_scene3D:
-                scene3D = self.scene_visualization()    
+                scene3D = self.scene_visualization()
+
                 # scene3D = cv2.resize(scene3D, (merge_multi_view.shape[1], merge_multi_view.shape[0]), interpolation=cv2.INTER_NEAREST)
                 # merge_multi_view = np.hstack((merge_multi_view, scene3D))
                 cv2.imshow('scene3D', scene3D)
@@ -374,6 +366,7 @@ class scene():
 
             elif key == ord('k') or key == ord('K'):
                 self.show_kpt2D = not self.show_kpt2D
+                self.pose2D.visualization = self.show_kpt2D
 
             elif key == ord('v') or key == ord('V'):
                 self.show_scene3D = not self.show_scene3D
@@ -388,30 +381,48 @@ class scene():
                 self.ax.elev += 1
             elif key == ord('d') or key == ord('D'):
                 self.ax.azim += 1
+
     @measureExcutionTime
     def get_match_list(self, frames:list):
        
         # Stage1, get 2D pose information.
         detect_info = []
         # detect_info = {cam_idx:[] for cam_idx in range(self.cam_nums)}
+        for i, frame in enumerate(frames):
+            frames[i] = cv2.resize(
+                frame, 
+                (self.cfg['merge_mmpose_width'],
+                self.cfg['merge_mmpose_height']
+                ), 
+                interpolation=cv2.INTER_NEAREST
+            )
+        '''
+        "Yolo Detection"
 
+        res: 1d nparray with only 1 or 0. Size equal to camera numbers. 
+            -> 1 : people is detected in views.
+            -> 0 : non of each one is detected. 
+
+        yolo_result: 1d list of ndarray. The lens of the list is equal to the numbers of cameras.
+        '''
         res, yolo_result = self.yolov5(frames)
 
         # Any peeson is detected in any view or not.
 
-        # if not res.any():
-        #     return [], detect_info
-        kpt2D_frames = []
-        for v in range(self.cam_nums):
- 
-            kpt2D_vis, kpt2D, heatmap= self.pose2D(frames[v], yolo_result[v])
-
-            for i in range(len(kpt2D)):
-                kpt2D[i]['heatmap'] = heatmap[0]['heatmap'][i]
-
-            kpt2D_frames.append(kpt2D_vis)
-            detect_info.append(kpt2D)
+        if not res.any():
+            return [], detect_info
         
+        kpt2D_frames, detect_info = utlis.batch_inference_mmpose(
+            self.pose2D,
+            frames,
+            yolo_result,
+            self.cfg['merge_mmpose_col_num'],
+            self.cfg['merge_mmpose_height'],
+            self.cfg['merge_mmpose_width'],                                                        
+            self.cam_nums
+        )
+        
+    
         if not any(detect_info):
             return [], detect_info
         
@@ -432,7 +443,7 @@ class scene():
         single_idx = [0]*self.cam_nums
 #         self.match_list = [white_ppl_idx, red_ppl_idx, grey_ppl_idx]
 #         self.match_list = [single_dix]
-
+   
         match_list = [single_idx]
         return match_list, detect_info
 

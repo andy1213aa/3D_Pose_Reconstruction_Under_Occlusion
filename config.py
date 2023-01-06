@@ -24,7 +24,14 @@ video_infomation = {
     # 'config_path' : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/mobilenetv2_coco_256x192.py',
     # 'ckpt_path'   : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/mobilenetv2_coco_256x192-d1e58e7b_20200727.pth',
     'smooth_cfg' :  '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/smoother/one_euro.py',
-    'cuda_idx': 1,
+    'cuda_idx': 0,
+
+    # Will affect the calculation speed
+    'merge_mmpose_width': 640,
+    'merge_mmpose_height': 360,
+    'merge_mmpose_col_num': 2,
+
+
 
     # yolov5
     'yolov5_path': '../yolov5s.pt',
