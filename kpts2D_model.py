@@ -1,5 +1,7 @@
-from mmpose.apis import (inference_top_down_pose_model, init_pose_model,
-                         vis_pose_result)
+from mmpose.apis import (inference_top_down_pose_model,
+                        init_pose_model,
+                        vis_pose_result,
+                        inference_bottom_up_pose_model)
 import warnings
 from mmpose.core import Smoother
 from mmpose.datasets import DatasetInfo
@@ -18,7 +20,7 @@ def measureExcutionTime(func):
     
 class Kpts2D_Model():
 
-    def __init__(self, config_path, ckpt_path, smooth_cfg, visualization, cuda_idx=0):
+    def __init__(self, config_path, ckpt_path, smooth_cfg, visualization, pose_type, cuda_idx=0):
         
         
         '''
@@ -26,7 +28,7 @@ class Kpts2D_Model():
         
         '''
 
-        #Top Down
+        self.pose_type = pose_type
         pose_detector_config = config_path
         pose_detector_checkpoint = ckpt_path
         
@@ -68,7 +70,7 @@ class Kpts2D_Model():
             detect_result: bbox detection result.
         '''
         detect_result = self.convert_object_detection_definition(detect_result)
-     
+    
         pose_det_results, heatmap = inference_top_down_pose_model(
                 self.pose_det_model,
                 frame,
@@ -78,6 +80,7 @@ class Kpts2D_Model():
                 dataset=self.pose_det_dataset,
                 return_heatmap=True,
                 outputs=None)
+
 
         # pose_det_results = self.smoother2D.smooth(pose_det_results)
         

@@ -47,10 +47,6 @@ class scene():
         self.init_3DPS()
         self.init_scene3D()
         self.cam_nums = len(self.cameras)
-    # def init_each_cam_RT(self, confidence=0.65):
-        
-    #     for video in self.cameras:
-    #         video.calibration_parameter['RT'] = video.movement
         
     def init_cameras(self):
         self.camera_type = self.cfg['type']
@@ -107,21 +103,11 @@ class scene():
                             self.cfg['ckpt_path'],
                             self.cfg['smooth_cfg'],
                             self.show_kpt2D,
+                            self.cfg['pose_type'],
                             self.cfg['cuda_idx'],
                             )
 
         print('Pose 2D detection model is loaded.')
-
-        
-        # Warm up
-        
-        warmup_frame = np.empty((self.cfg['resolution_height'], 
-                                self.cfg['resolution_width'], 
-                                3))
-
-        _, warmup_yolov5_result = self.yolov5(warmup_frame)
-        # pose2D kpts deal with single frame once of time.
-        warmup_pose2D = self.pose2D(warmup_frame, warmup_yolov5_result[0])
 
     def init_3DPS(self):
         def load_distribution(dataset='Unified'):
@@ -204,6 +190,7 @@ class scene():
             skel['tree'][12]['name'] = 'RAnk'
             skel['tree'][12]['children'] = []
             return skel
+
         def getPictoStruct(skel, distribution):
             """to get the pictorial structure"""
             graph = skel['tree']
@@ -273,6 +260,7 @@ class scene():
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             MV = cv2.VideoWriter('multi_view.avi', fourcc, self.cfg['frame_rate'], (merge_singleView_width*2, merge_singleView_height*2))
             D3V = cv2.VideoWriter('D3view.avi', fourcc, self.cfg['frame_rate'], (int(self.canvas_width), int(self.canvas_height)))
+
         while True:
             self.actors = []
             start = time.time()
@@ -326,10 +314,6 @@ class scene():
                 res = self.recover3Dpose(image_nparray, match_list, detect_info)
             
             end = time.time()
-            
-                
-            # print(f'excution time: {end-start: .4f} sec.')
-
             for i, view in enumerate(self.show_images):
           
                 if self.show_FPS:
@@ -345,14 +329,13 @@ class scene():
 
             if self.show_scene3D:
                 scene3D = self.scene_visualization()
-
                 # scene3D = cv2.resize(scene3D, (merge_multi_view.shape[1], merge_multi_view.shape[0]), interpolation=cv2.INTER_NEAREST)
                 # merge_multi_view = np.hstack((merge_multi_view, scene3D))
                 cv2.imshow('scene3D', scene3D)
                 if self.record_result:
                     D3V.write(scene3D)
             
-            cv2.imshow('Views', merge_multi_view)
+            cv2.imshow('Views', merge_multi_view.astype(np.uint8))
 
             key = cv2.waitKey(1)
             if key & 0xFF == ord('q') or key == 27:
@@ -387,15 +370,15 @@ class scene():
        
         # Stage1, get 2D pose information.
         detect_info = []
-        # detect_info = {cam_idx:[] for cam_idx in range(self.cam_nums)}
         for i, frame in enumerate(frames):
             frames[i] = cv2.resize(
                 frame, 
-                (self.cfg['merge_mmpose_width'],
-                self.cfg['merge_mmpose_height']
-                ), 
+                (self.cfg['merge_mmpose_width'],self.cfg['merge_mmpose_height']), 
                 interpolation=cv2.INTER_NEAREST
             )
+        
+        
+     
         '''
         "Yolo Detection"
 
@@ -406,13 +389,11 @@ class scene():
         yolo_result: 1d list of ndarray. The lens of the list is equal to the numbers of cameras.
         '''
         res, yolo_result = self.yolov5(frames)
-
         # Any peeson is detected in any view or not.
-
         if not res.any():
             return [], detect_info
-        
-        kpt2D_frames, detect_info = utlis.batch_inference_mmpose(
+            
+        kpt2D_frames, detect_info = utlis.batch_inference_top_down_mmpose(
             self.pose2D,
             frames,
             yolo_result,
@@ -422,7 +403,6 @@ class scene():
             self.cam_nums
         )
         
-    
         if not any(detect_info):
             return [], detect_info
         
@@ -441,8 +421,6 @@ class scene():
         single_idx = (1-res)
         single_idx[single_idx==1] = -1
         single_idx = [0]*self.cam_nums
-#         self.match_list = [white_ppl_idx, red_ppl_idx, grey_ppl_idx]
-#         self.match_list = [single_dix]
    
         match_list = [single_idx]
         return match_list, detect_info
@@ -467,7 +445,6 @@ class scene():
             # Create candidate infomation
             # candidates_kpts, candidates_heatmap = ppl.get_candidate_info(self.cameras, detect_info) # (17, n, 3), (17, n, 64, 48)
             candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic = ppl.get_candidate_info(self.cameras, detect_info, self.camera_pair) # (17, n, 3), (17, n, 64, 48)
-            # print('detect_info: ', detect_info)
             
             # If there exist at least two cameras get ppl infomation
             if len(candidates_cams) ==0:
@@ -482,8 +459,7 @@ class scene():
             '''
             Step 2: Calculate the maximum likelihood of prior  
             '''
-#             heat_max = np.argmax(heatmap_prior, axis=1)
-#             length_max = np.argmax(bone_length_prior, axis=1)
+
             heatmap_prior_prod = []
             bone_length_prior_prod = []
             total_prior_prod = []
@@ -492,21 +468,15 @@ class scene():
                 bone_length_prior_prod.append(np.prod(bone_length_prior[:, i]))
                 total_prior_prod.append(np.prod(heatmap_prior[:, i]) * np.prod(bone_length_prior[:, i]))
                 
-            # camera_pair_prior = [np.prod(heatmap_prior[:, i]) for i in range(len(candidates_cams))]
+  
             camera_pair_prior = [np.prod(heatmap_prior[:, i]) * np.prod(bone_length_prior[:, i]) for i in range(len(candidates_cams))]
             max_prior = np.argmax(camera_pair_prior)
             
             print('Pair Camera: ', candidates_cams[max_prior])
-#             print('heatmap_prior_prod: ', heatmap_prior_prod)
-#             print('bone_length_prior_prod: ', bone_length_prior_prod)
-#             print('total_prior_prod: ', total_prior_prod)
-#             print('Max pair prior idx: ', max_prior)
-#             print('Max pair prior: ', camera_pair_prior[max_prior])
-            # max_prior = -1
+
             ppl.set_winner_kpts(candidates_kpts[:, max_prior, :], candidates_cams[max_prior])
             self.actors.append(ppl)
-#             result_heatmap_prior.append(heatmap_prior)
-#             result_bone_length_prior.append(bone_length_prior)
+
         return 1
 
     @measureExcutionTime
@@ -514,44 +484,24 @@ class scene():
             
         # 計算每個關節點
         total_prior = []
-        # print('candidates_intrinsic: ', candidates_intrinsic.shape)
-        # print('candidates_kpts: ', candidates_kpts.shape)
+
         candidates_reProject2d_homo = candidates_intrinsic @ candidates_kpts #(17, cam_num_composition, 3, 3) x (17, cam_num_composition, 3, 1) = (17, cam_num_composition, 3, 1)
 
         for joint_idx in range(candidates_kpts.shape[0]): 
             same_kpts_different_view = []
             for camera_pair in range(candidates_kpts.shape[1]): # 依照相機數量
                 
-                # joint_points3D = candidates_kpts[joint_idx][camera_pair] #(3, )
-                
-                
+    
                 camID = candidates_cams[camera_pair][0]
                 actorID = pplIdxs[camID]
 
                 cropShape = (int(detect_info[camID][actorID]['bbox'][3] - detect_info[camID][actorID]['bbox'][1]),
                              int(detect_info[camID][actorID]['bbox'][2] - detect_info[camID][actorID]['bbox'][0]),
                             3)
-                # cropShape = self.cameras[camID].detect_info[self.frame_num][actorID]['crop'].shape
-                # K = self.cameras[camID].calibration_parameter['K']
-                
-                # '''
-                # reprojection
-                # '''
-      
-                # RT = np.array([[1, 0, 0, 0], 
-                #                [0, 1, 0, 0], 
-                #                [0, 0, 1, 0]], dtype=np.float32)
-                
-                # projMatr1 = np.matmul(K, RT)
-                # projMatr1 = projMatr1[:, :3]
-                # reProject2d_homo = projMatr1 @ joint_points3D
+
                 reProject2d_homo = candidates_reProject2d_homo[joint_idx][camera_pair]
-                # print('reProject2d_homo_shape: ', reProject2d_homo.shape)
                 reProject2d_homo /= reProject2d_homo[2]
                 reProject2d = reProject2d_homo[:2]
-                # reProject2d = np.squeeze(np.asarray(reProject2d))
-                # cv2.circle(self.cameras[camID].now_frame, (int(reProject2d[0]), int(reProject2d[1])), 10, (0, 0, 255), -1)
-                
 
                 '''
                 heatmap
@@ -573,14 +523,10 @@ class scene():
                 reProject2d[1] -= shift[1]
                 
                 if reProject2d[0] < 0 or reProject2d[1] < 0 or reProject2d[0] > cropShape[1] or reProject2d[1] > cropShape[0]:
-#                     cv2.circle(crop, (int(reProject2d[0]), int(reProject2d[1])), 5, (0,0,0), -1)
                     same_kpts_different_view.append(1e-6)
                 else:
         #       #calculate heatmap value
                     probability = joint_heatmap[int(reProject2d[1]), int(reProject2d[0])]
-                    
-                    # cv2.circle(joint_heatmap, (int(reProject2d[0]), int(reProject2d[1])), 5, (0,0,probability*255), -1)
-                    # cv2.imwrite(f'CAM_{camID}_{self.frame_num}.jpg', joint_heatmap.astype('uint8'))
                     same_kpts_different_view.append(probability)
 
                 

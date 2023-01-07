@@ -17,7 +17,13 @@ def measureExcutionTime(func):
     return _time_it
 
 @measureExcutionTime
-def batch_inference_mmpose(model, frames, yolo_result, col_num, merge_singleView_height, merge_singleView_width, seperate_num):
+def batch_inference_top_down_mmpose(model, 
+                                    frames, 
+                                    yolo_result, 
+                                    col_num, 
+                                    merge_singleView_height, 
+                                    merge_singleView_width, 
+                                    seperate_num):
     '''
     MMpose not support batch inference.
     So we merge multiple view images into one to do like a batch inference way.
@@ -29,20 +35,33 @@ def batch_inference_mmpose(model, frames, yolo_result, col_num, merge_singleView
 
     merge_frames = merge_images(frames, col_num, merge_singleView_height, merge_singleView_width)
     merge_yolo_result= shift_yolo_bbox(yolo_result, col_num, merge_singleView_height, merge_singleView_width)
-
     merge_kpt2D_vis, merge_kpt2D, merge_heatmap = model(merge_frames, merge_yolo_result)
-    
     kpt2D_frames = undo_merge_image(merge_kpt2D_vis,col_num, merge_singleView_height, merge_singleView_width) 
-    detect_info = unshift_merge_kpt2D(merge_kpt2D, merge_heatmap, col_num, merge_singleView_height, merge_singleView_width, seperate_num)
+    detect_info = unshift_merge_top_down_kpt2D(merge_kpt2D, merge_heatmap, col_num, merge_singleView_height, merge_singleView_width, seperate_num)
+
     return kpt2D_frames, detect_info
-    
+
+def batch_inference_bottom_up_mmpose(model, 
+                                    frames,  
+                                    col_num, 
+                                    merge_singleView_height, 
+                                    merge_singleView_width, 
+                                    seperate_num):
+    merge_frames = merge_images(frames, col_num, merge_singleView_height, merge_singleView_width)
+    merge_kpt2D_vis, merge_kpt2D, merge_heatmap = model(merge_frames, [])
+    # if not merge_kpt2D.any():
+    #     return merge_kpt2D_vis, []
+    kpt2D_frames = undo_merge_image(merge_kpt2D_vis,col_num, merge_singleView_height, merge_singleView_width)
+    detect_info = unshift_merge_bottom_up_kpt2D(merge_kpt2D, merge_heatmap, col_num, merge_singleView_height, merge_singleView_width, seperate_num)
+    return kpt2D_frames, detect_info
+
 # @measureExcutionTime
 def merge_images(images: list, col_num: int, merge_singleView_height: int, merge_singleView_width:int):
 
     '''
     Merge multiple images together.
     '''
-
+    
     merge_multi_view = np.zeros((int(np.ceil(len(images)/col_num) * merge_singleView_height), 
                                         col_num * merge_singleView_width, 3), 
                                         dtype='uint8')
@@ -105,7 +124,7 @@ def undo_merge_image(merge_image: np.ndarray, col_num: int, merge_singleView_hei
 
     return result
 # @measureExcutionTime
-def unshift_merge_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
+def unshift_merge_top_down_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
 
     result = [[] for _ in range(seperate_num)]
     
@@ -130,6 +149,39 @@ def unshift_merge_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_si
         # bbox Y
         detect_info['bbox'][1] -= row_idx * merge_singleView_height
         detect_info['bbox'][3] -= row_idx * merge_singleView_height
+
+        # keypoints X
+        detect_info['keypoints'][:, 0] -=  col_idx * merge_singleView_width
+        # keypoints Y
+        detect_info['keypoints'][:, 1] -=  row_idx * merge_singleView_height
+
+        #heatmap
+        detect_info['heatmap'] = merge_heatmap[0]['heatmap'][i]
+
+        result[original_idx].append(detect_info)
+        
+
+    # assert len(result) == len(ppl_num_ineach_view), "Error accure with kpt unshift."
+    return result
+
+def unshift_merge_bottom_up_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
+
+    result = [[] for _ in range(seperate_num)]
+    
+    for i, detect_info in enumerate(merge_kpt2D):
+        
+        '''
+        Use top-left anchor to check which original idx the bbox is.
+        '''
+
+        row_idx = detect_info['keypoints'][0, 1] // merge_singleView_height
+        col_idx = detect_info['keypoints'][0, 0] // merge_singleView_width
+        
+        original_idx = int(row_idx * col_num + col_idx)
+
+        '''
+        unshift coordination
+        '''
 
         # keypoints X
         detect_info['keypoints'][:, 0] -=  col_idx * merge_singleView_width

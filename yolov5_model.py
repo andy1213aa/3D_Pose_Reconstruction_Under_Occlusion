@@ -22,7 +22,9 @@ class yolov5_model():
         self.model = torch.hub.load('../yolov5', 
                         'custom', 
                         path=video_infomation['yolov5_path'], 
-                        source='local')
+                        force_reload=True,
+                        source='local',
+                        )
 
         self.model.conf = 0.7         # NMS confidence threshold
         self.model.iou = 0.45          # NMS IoU threshold
@@ -32,12 +34,14 @@ class yolov5_model():
         self.model.max_det = 1000      # maximum number of detections per image
         self.model.amp = False         # Automatic Mixed Precision (AMP) inference
 
-  
+ 
     def __call__(self, frames):
-
+        # start = time.time()
         res = np.zeros((len(frames)))
         # Maybe try to not move to cpu.
+        
         gpu_out = self.model(frames).xyxy
+        # print(f'yolo gpu: {time.time()-start}')
         cpu_out = []
 
         for i, g in enumerate(gpu_out):
@@ -45,7 +49,7 @@ class yolov5_model():
             if tmp.size > 0:
                 res[i] = 1 
             cpu_out.append(tmp)
-        
+        # print(f'yolo to cpu: {time.time()-start}')
         return res, cpu_out
 
 

@@ -3,7 +3,7 @@
 
 video_infomation = {
 
-    'type' : 'video',  # 'realsense', 'video', 'ipcam'
+    'type' : 'realsense',  # 'realsense', 'video', 'ipcam'
     'resolution_width' : 1280,  # (pixels)
     'resolution_height' : 720,  # pixels
     'frame_rate' : 30,  # fps
@@ -15,14 +15,17 @@ video_infomation = {
 
 
     # mmpose 2D model path
+    'pose_type': 'top_down', #'top_down, bottom_up'
+    # TOP-DOWN
     # 'config_path' : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/hrnet_w48_coco_256x192.py',
     # 'ckpt_path'   : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/hrnet_w48_coco_256x192-b9e0b3ab_20200708.pth',
-
     'config_path' : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/res50_coco_256x192.py',
     'ckpt_path'   : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/res50_coco_256x192-ec54d7f3_20200709.pth',
 
-    # 'config_path' : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/mobilenetv2_coco_256x192.py',
-    # 'ckpt_path'   : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/mobilenetv2_coco_256x192-d1e58e7b_20200727.pth',
+    # BOTTOM-UP
+    # 'config_path' : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/bottom_up/res50_coco_512x512.py',
+    # 'ckpt_path'   : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/bottom_up/res50_coco_512x512-5521bead_20200816.pth',
+
     'smooth_cfg' :  '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/smoother/one_euro.py',
     'cuda_idx': 0,
 
@@ -34,15 +37,16 @@ video_infomation = {
 
 
     # yolov5
-    'yolov5_path': '../yolov5s.pt',
+    'yolov5_path': '../yolov5n.engine',#'pt, engine, onnx',
 
     #realsense serial numbers
     # Only work if "type" is "realsense"
     'realsense_SN' : [
-        '939622073590',
-        '938422074078',
-        '941322072583',
-        '939622071867'
+        '142422251208'
+        # '939622073590',
+        # '938422074078',
+        # '941322072583',
+        # '939622071867'
     ],
 
     # ipcam 
