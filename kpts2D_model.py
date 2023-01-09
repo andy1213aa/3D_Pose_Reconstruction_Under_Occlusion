@@ -62,7 +62,7 @@ class Kpts2D_Model():
         self.thickness = 2
         self.visualization = visualization
 
-
+    @measureExcutionTime
     def __call__(self, frame, detect_result):
         '''
         Input:

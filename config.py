@@ -3,7 +3,7 @@
 
 video_infomation = {
 
-    'type' : 'realsense',  # 'realsense', 'video', 'ipcam'
+    'type' : 'video',  # 'realsense', 'video', 'ipcam'
     'resolution_width' : 1280,  # (pixels)
     'resolution_height' : 720,  # pixels
     'frame_rate' : 30,  # fps
@@ -17,10 +17,12 @@ video_infomation = {
     # mmpose 2D model path
     'pose_type': 'top_down', #'top_down, bottom_up'
     # TOP-DOWN
-    # 'config_path' : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/hrnet_w48_coco_256x192.py',
-    # 'ckpt_path'   : f'F:/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/hrnet_w48_coco_256x192-b9e0b3ab_20200708.pth',
+    # 'config_path' : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/hrnet_w48_coco_256x192.py',
+    # 'ckpt_path'   : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/hrnet_w48_coco_256x192-b9e0b3ab_20200708.pth',
     'config_path' : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/res50_coco_256x192.py',
     'ckpt_path'   : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/res50_coco_256x192-ec54d7f3_20200709.pth',
+    # 'config_path' : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/Top_down/res50_coco_256x192_fp16_dynamic.py',
+    # 'ckpt_path'   : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/ckpts/Top_down/res50_coco_256x192_fp16_dynamic-6edb79f3_20210430.pth',
 
     # BOTTOM-UP
     # 'config_path' : '/media/aaron/work/ITRI_SSTC/S200/golf/MM/mmpose_test/3D_pose_sview_multiperson/mmpose/2D/configs/bottom_up/res50_coco_512x512.py',
@@ -42,11 +44,11 @@ video_infomation = {
     #realsense serial numbers
     # Only work if "type" is "realsense"
     'realsense_SN' : [
-        '142422251208'
-        # '939622073590',
-        # '938422074078',
-        # '941322072583',
-        # '939622071867'
+        # '142422251208'
+        '939622073590',
+        '938422074078',
+        '941322072583',
+        '939622071867'
     ],
 
     # ipcam 
@@ -63,7 +65,8 @@ video_infomation = {
     
     #Camera idx pair
     'cam_idx_pair': [[0, 1],
-                     [1, 2]],
+                     [1, 2]
+                     ],
     # Denormalize the tvec to world coordinate.
     # Write in fixed value now.
     # Should be automatically calculate in future.               

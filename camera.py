@@ -29,7 +29,10 @@ class Camera():
         
         if self.record_single_view:
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.videoWriter = cv2.VideoWriter(f'cam_view_{self.idx}.mp4', fourcc,self.cfg['frame_rate'], (self.cfg['resolution_width'],  self.cfg['resolution_height']))
+            self.videoWriter = cv2.VideoWriter(f'cam_view_{self.idx}.mp4', 
+                                            fourcc,self.cfg['frame_rate'], 
+                                            (self.cfg['resolution_width'],  
+                                            self.cfg['resolution_height']))
 
     def camera_initialize(self):
 
@@ -99,69 +102,6 @@ class Camera():
         
         if self.record_single_view:
             self.videoWriter.release()
-    # @property
-    # def now_frame_num(self):
-    #     return self._now_frame_num
-  
-    # @now_frame_num.setter
-    # def now_frame_num(self, now_frame_num):
-    #     assert(self.video_capture is not None), "Video Captuer is Empty. Please run 'read' function to read video first." 
-        
-    #     self._now_frame_num = now_frame_num
-    #     if self._now_frame_num == self._pre_frame_num:
-    #         pass
-        
-    #     elif self._now_frame_num <= self._pre_frame_num:
-    #         self.read()
-    #         self.get_specific_frame(self._now_frame_num)
-            
-    #     else:
-    #         push_frame_num = now_frame_num - self._pre_frame_num
-           
-    #         self.get_specific_frame(push_frame_num)
-        
-    #     self._pre_frame_num = self._now_frame_num
-            
-    # def get_specific_frame(self, sp_frame):
-    #     assert (self.video_capture.isOpened), 'VideoCaptures is empty. Please run method "read" '
-
-    #     frame_num = 0
-    #     while frame_num < sp_frame:   
-    #         success, frame = self.video_capture.read()
-    #         if not success:
-    #             break
-    #         frame_num += 1
-    #     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #     self.now_frame = frame
-
-    def crop_bbox(self, kpt2D, frame = None):
-        info_list = []
-        
-        for info in kpt2D:
-            xyxy = info['bbox'].astype('int')
-            if frame is None:
-                crop = self.now_frame[xyxy[1]:xyxy[3], xyxy[0]:xyxy[2]]
-            else:
-                crop = frame[xyxy[1]:xyxy[3], xyxy[0]:xyxy[2]]
-            info['crop'] = crop
-            info_list.append(info)
-            
-        self.detect_info[str(self._now_frame_num)] = info_list
-        
-    def show_crop_image(self, frame_num):
-        people_nums = len(self.detect_info[str(frame_num)])
-        plt.figure()
-        
-        if people_nums == 0:
-            plt.imshow(self.now_frame)
-        else:
-            #subplot(r,c) provide the no. of rows and columns
-            f, axarr = plt.subplots(1,people_nums+1) 
-
-            # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-            axarr[0].imshow(self.now_frame)
-            for p in range(people_nums):
-                axarr[p+1].imshow(self.detect_info[str(frame_num)][p]['crop'])
 
         
     def load_calibration_parameters(self):

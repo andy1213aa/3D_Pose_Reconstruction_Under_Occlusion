@@ -55,7 +55,7 @@ def batch_inference_bottom_up_mmpose(model,
     detect_info = unshift_merge_bottom_up_kpt2D(merge_kpt2D, merge_heatmap, col_num, merge_singleView_height, merge_singleView_width, seperate_num)
     return kpt2D_frames, detect_info
 
-# @measureExcutionTime
+@measureExcutionTime
 def merge_images(images: list, col_num: int, merge_singleView_height: int, merge_singleView_width:int):
 
     '''
@@ -79,7 +79,8 @@ def merge_images(images: list, col_num: int, merge_singleView_height: int, merge
                         col_idx*merge_singleView_width:(col_idx+1)*merge_singleView_width] = _view
 
     return merge_multi_view
-# @measureExcutionTime
+
+@measureExcutionTime
 def shift_yolo_bbox(yolo_batch_result:list, col_num, merge_singleView_height, merge_singleView_width) -> np.ndarray:
 
     '''
@@ -107,7 +108,8 @@ def shift_yolo_bbox(yolo_batch_result:list, col_num, merge_singleView_height, me
             result.append(bbox)
             
     return np.array(result)
-# @measureExcutionTime
+
+@measureExcutionTime
 def undo_merge_image(merge_image: np.ndarray, col_num: int, merge_singleView_height: int, merge_singleView_width:int):
     merge_height, merge_width, _= merge_image.shape
     assert merge_height % merge_singleView_height == 0 and merge_width % merge_singleView_width == 0, 'Merge size is fail, please check again.'
@@ -123,7 +125,8 @@ def undo_merge_image(merge_image: np.ndarray, col_num: int, merge_singleView_hei
         result.append(tmp_seperate_image)
 
     return result
-# @measureExcutionTime
+
+@measureExcutionTime
 def unshift_merge_top_down_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
 
     result = [[] for _ in range(seperate_num)]
@@ -163,7 +166,8 @@ def unshift_merge_top_down_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int,
 
     # assert len(result) == len(ppl_num_ineach_view), "Error accure with kpt unshift."
     return result
-
+    
+@measureExcutionTime
 def unshift_merge_bottom_up_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
 
     result = [[] for _ in range(seperate_num)]

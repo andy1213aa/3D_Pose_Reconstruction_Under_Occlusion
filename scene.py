@@ -14,7 +14,9 @@ from scipy import stats
 import glob
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import utlis
-
+import recover3Dpose
+import pictorial_3D
+import main_algorithm
 def measureExcutionTime(func):
     @wraps(func)
     def _time_it(*args, **kwargs):
@@ -44,7 +46,7 @@ class scene():
 
         self.init_cameras() 
         self.init_model()
-        self.init_3DPS()
+        self.pictoStruct = pictorial_3D.init_3DPS()
         self.init_scene3D()
         self.cam_nums = len(self.cameras)
         
@@ -109,135 +111,6 @@ class scene():
 
         print('Pose 2D detection model is loaded.')
 
-    def init_3DPS(self):
-        def load_distribution(dataset='Unified'):
-            joints2edges = {(0, 1): 0,
-                            (1, 0): 0,
-                            (0, 2): 1,
-                            (2, 0): 1,
-                            (0, 7): 2,
-                            (7, 0): 2,
-                            (0, 8): 3,
-                            (8, 0): 3,
-                            (1, 3): 4,
-                            (3, 1): 4,
-                            (2, 4): 5,
-                            (4, 2): 5,
-                            (3, 5): 6,
-                            (5, 3): 6,
-                            (4, 6): 7,
-                            (6, 4): 7,
-                            (7, 9): 8,
-                            (9, 7): 8,
-                            (8, 10): 9,
-                            (10, 8): 9,
-                            (9, 11): 10,
-                            (11, 9): 10,
-                            (10, 12): 11,
-                            (12, 10): 11}
-            distribution_dict = {
-                'Shelf': {'mean': np.array ( [0.30280354, 0.30138756, 0.79123502, 0.79222949, 0.28964179,
-                                            0.30393598, 0.24479075, 0.24903801, 0.40435882, 0.39445121,
-                                            0.3843522, 0.38199836] ),
-                        'std': np.array ( [0.0376412, 0.0304385, 0.0368604, 0.0350577, 0.03475468,
-                                            0.03876828, 0.0353617, 0.04009757, 0.03974647, 0.03696424,
-                                            0.03008979, 0.03143456] ) * 2, 'joints2edges': joints2edges
-                        },
-                'Campus':
-                    {'mean': np.array ( [0.29567343, 0.28090078, 0.89299809, 0.88799211, 0.32651703,
-                                        0.33454941, 0.29043165, 0.29932416, 0.43846395, 0.44881553,
-                                        0.46952846, 0.45528477] ),
-                    'std': np.array ( [0.01731019, 0.0226062, 0.06650426, 0.06009805, 0.04606478,
-                                        0.04059899, 0.05868499, 0.06553948, 0.04129285, 0.04205624,
-                                        0.03633746, 0.02889456] ) * 2, 'joints2edges': joints2edges},
-                'Unified': {'mean': np.array ( [0.29743698, 0.28764493, 0.86562234, 0.86257052, 0.31774172,
-                                                0.32603399, 0.27688682, 0.28548218, 0.42981244, 0.43392589,
-                                                0.44601327, 0.43572195] ),
-                            'std': np.array ( [0.02486281, 0.02611557, 0.07588978, 0.07094158, 0.04725651,
-                                            0.04132808, 0.05556177, 0.06311393, 0.04445206, 0.04843436,
-                                            0.0510811, 0.04460523] ) * 16, 'joints2edges': joints2edges}
-            }
-            # logger.debug ( f"Using distribution on {dataset}" )
-            return distribution_dict[dataset]
-
-        def getskel():
-            skel = {}
-            skel['tree'] = [{} for i in range ( 13 )]
-            skel['tree'][0]['name'] = 'Nose'
-            skel['tree'][0]['children'] = [1, 2, 7, 8]
-            skel['tree'][1]['name'] = 'LSho'
-            skel['tree'][1]['children'] = [3]
-            skel['tree'][2]['name'] = 'RSho'
-            skel['tree'][2]['children'] = [4]
-            skel['tree'][3]['name'] = 'LElb'
-            skel['tree'][3]['children'] = [5]
-            skel['tree'][4]['name'] = 'RElb'
-            skel['tree'][4]['children'] = [6]
-            skel['tree'][5]['name'] = 'LWri'
-            skel['tree'][5]['children'] = []
-            skel['tree'][6]['name'] = 'RWri'
-            skel['tree'][6]['children'] = []
-            skel['tree'][7]['name'] = 'LHip'
-            skel['tree'][7]['children'] = [9]
-            skel['tree'][8]['name'] = 'RHip'
-            skel['tree'][8]['children'] = [10]
-            skel['tree'][9]['name'] = 'LKne'
-            skel['tree'][9]['children'] = [11]
-            skel['tree'][10]['name'] = 'RKne'
-            skel['tree'][10]['children'] = [12]
-            skel['tree'][11]['name'] = 'LAnk'
-            skel['tree'][11]['children'] = []
-            skel['tree'][12]['name'] = 'RAnk'
-            skel['tree'][12]['children'] = []
-            return skel
-
-        def getPictoStruct(skel, distribution):
-            """to get the pictorial structure"""
-            graph = skel['tree']
-            level = np.zeros ( len ( graph ) )
-            for i in range ( len ( graph ) ):
-                queue = np.array ( graph[i]['children'], dtype=np.int32 )
-                for j in range ( queue.shape[0] ):
-                    graph[queue[j]]['parent'] = i
-                while queue.shape[0] != 0:
-                    level[queue[0]] = level[queue[0]] + 1
-                    queue = np.append ( queue, graph[queue[0]]['children'] )
-                    queue = np.delete ( queue, 0 )
-                    queue = np.array ( queue, dtype=np.int32 )
-            trans_order = np.argsort ( -level )
-            edges = [{} for i in range ( len ( trans_order ) - 1 )]
-            for i in range ( len ( trans_order ) - 1 ):
-                edges[i]['child'] = trans_order[i]
-                edges[i]['parent'] = graph[edges[i]['child']]['parent']
-                edge_id = distribution['joints2edges'][(edges[i]['child'], edges[i]['parent'])]
-                edges[i]['bone_mean'] = distribution['mean'][edge_id]
-                edges[i]['bone_std'] = distribution['std'][edge_id]
-            return edges
-
-        def convert_triangulation_COCO2014_to_H36m_index(points3D):
-            coco2014_to_H36m = {0:  'Nose',
-                                5:  'LSho',
-                                6:  'RSho',
-                                7:  'LElb',
-                                8:  'RElb',
-                                9:  'LWri',
-                                10: 'RWri',
-                                11: 'LHip',
-                                12: 'RHip',
-                                13: 'LKne',
-                                14: 'RKne',
-                                15: 'LAnk',
-                                16: 'RAnk'}
-            
-            convert_points3D = []
-            for i in coco2014_to_H36m.keys():
-                convert_points3D.append(points3D[i])
-                
-            return np.array(convert_points3D)
-        
-        distribution = load_distribution('Unified')
-        skel = getskel()
-        self.pictoStruct = getPictoStruct(skel, distribution)
     
     def init_scene3D(self):
 
@@ -370,14 +243,13 @@ class scene():
        
         # Stage1, get 2D pose information.
         detect_info = []
+
         for i, frame in enumerate(frames):
             frames[i] = cv2.resize(
                 frame, 
                 (self.cfg['merge_mmpose_width'],self.cfg['merge_mmpose_height']), 
                 interpolation=cv2.INTER_NEAREST
             )
-        
-        
      
         '''
         "Yolo Detection"
@@ -444,17 +316,17 @@ class scene():
 
             # Create candidate infomation
             # candidates_kpts, candidates_heatmap = ppl.get_candidate_info(self.cameras, detect_info) # (17, n, 3), (17, n, 64, 48)
-            candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic = ppl.get_candidate_info(self.cameras, detect_info, self.camera_pair) # (17, n, 3), (17, n, 64, 48)
+            candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic = recover3Dpose.get_candidate_info(ppl, self.cameras, detect_info, self.camera_pair) # (17, n, 3), (17, n, 64, 48)
             
             # If there exist at least two cameras get ppl infomation
             if len(candidates_cams) ==0:
                 continue
       
             # Calculate heatmap prior
-            heatmap_prior = self.get_heatmap_prior(candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic, pplIdxs, detect_info)
+            heatmap_prior = recover3Dpose.get_heatmap_prior(candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic, pplIdxs, detect_info)
 
             # Calculate bone lenght prior
-            bone_length_prior = self.get_bone_length_prior(candidates_kpts)
+            bone_length_prior = recover3Dpose.get_bone_length_prior(self.pictoStruct, candidates_kpts)
     
             '''
             Step 2: Calculate the maximum likelihood of prior  
@@ -478,82 +350,6 @@ class scene():
             self.actors.append(ppl)
 
         return 1
-
-    @measureExcutionTime
-    def get_heatmap_prior(self, candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic, pplIdxs, detect_info):
-            
-        # 計算每個關節點
-        total_prior = []
-
-        candidates_reProject2d_homo = candidates_intrinsic @ candidates_kpts #(17, cam_num_composition, 3, 3) x (17, cam_num_composition, 3, 1) = (17, cam_num_composition, 3, 1)
-
-        for joint_idx in range(candidates_kpts.shape[0]): 
-            same_kpts_different_view = []
-            for camera_pair in range(candidates_kpts.shape[1]): # 依照相機數量
-                
-    
-                camID = candidates_cams[camera_pair][0]
-                actorID = pplIdxs[camID]
-
-                cropShape = (int(detect_info[camID][actorID]['bbox'][3] - detect_info[camID][actorID]['bbox'][1]),
-                             int(detect_info[camID][actorID]['bbox'][2] - detect_info[camID][actorID]['bbox'][0]),
-                            3)
-
-                reProject2d_homo = candidates_reProject2d_homo[joint_idx][camera_pair]
-                reProject2d_homo /= reProject2d_homo[2]
-                reProject2d = reProject2d_homo[:2]
-
-                '''
-                heatmap
-                '''
-           
-                shift = [detect_info[camID][actorID]['bbox'][0], 
-                         detect_info[camID][actorID]['bbox'][1]]
-                joint_heatmap = cv2.resize(candidates_heatmap[joint_idx][camera_pair], 
-                                           (cropShape[1], cropShape[0]), interpolation=cv2.INTER_NEAREST)
-
-                maxi = np.max(joint_heatmap)
-                mini = np.min(joint_heatmap)
-          
-            
-                joint_heatmap = (joint_heatmap -mini) / (maxi - mini)
-                
-                #convert coordinaion
-                reProject2d[0] -= shift[0]
-                reProject2d[1] -= shift[1]
-                
-                if reProject2d[0] < 0 or reProject2d[1] < 0 or reProject2d[0] > cropShape[1] or reProject2d[1] > cropShape[0]:
-                    same_kpts_different_view.append(1e-6)
-                else:
-        #       #calculate heatmap value
-                    probability = joint_heatmap[int(reProject2d[1]), int(reProject2d[0])]
-                    same_kpts_different_view.append(probability)
-
-                
-
-            total_prior.append(same_kpts_different_view)
-        return np.array(total_prior)
-
-    @measureExcutionTime
-    def get_bone_length_prior(self, candidates_kpts):
-        
-        coco2h36m = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-        '''
-        Points3D should be convert to h36m index first.
-        '''
-        convert_definition_candidates_kpts = candidates_kpts[coco2h36m]
-
-        bone_length_prior_result = []
-        for edge in self.pictoStruct:
-            bone_length = np.linalg.norm(convert_definition_candidates_kpts[edge['child']] 
-                                         - convert_definition_candidates_kpts[edge['parent']], axis = 1)
-            relative_error = np.abs ( bone_length - edge['bone_mean'] ) / edge['bone_std']
-            
-            prior = stats.norm.sf ( relative_error ) * 2
-   
-            bone_length_prior_result.append(prior)
-
-        return np.array(bone_length_prior_result)
 
     @measureExcutionTime
     def scene_visualization(self):
