@@ -20,7 +20,7 @@ def measureExcutionTime(func):
     
 class Kpts2D_Model():
 
-    def __init__(self, config_path, ckpt_path, smooth_cfg, visualization, pose_type, cuda_idx=0):
+    def __init__(self, config_path, ckpt_path, smooth_cfg, pose_type, cuda_idx=0):
         
         
         '''
@@ -60,7 +60,7 @@ class Kpts2D_Model():
         # drawing parameter
         self.radius = 5
         self.thickness = 2
-        self.visualization = visualization
+        self.visualization = False
 
     @measureExcutionTime
     def __call__(self, frame, detect_result):

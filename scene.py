@@ -1,14 +1,9 @@
 import numpy as np
-
-import cv2
 import time
 import pyrealsense2 as rs
-import matplotlib.pyplot as plt
-
 from functools import wraps
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import utlis
 import main_algorithm
+
 def measureExcutionTime(func):
     @wraps(func)
     def _time_it(*args, **kwargs):
@@ -22,32 +17,33 @@ def measureExcutionTime(func):
 
 
 class scene():
-    def __init__(self, config):
-        self.cfg = config
-        self.cameras = []        
+    def __init__(self, 
+                cameras: list,
+                pplDetect_model,
+                pose2D_model,
+                pictoStruct: list,
+                merge_singleView_width: int,
+                merge_singleView_height: int,
+                merge_col_num: int,
+                cam_idx_pair: list,
+                ):
+
+        self.pplDetect_model = pplDetect_model
+        self.pose2D_model = pose2D_model
+        self.pictoStruct = pictoStruct
+        self.merge_singleView_width = merge_singleView_width
+        self.merge_singleView_height = merge_singleView_height
+        self.merge_col_num = merge_col_num
+        self.cameras = cameras
+        self.cam_idx_pair = cam_idx_pair
+
+        self.cam_nums = len(cameras)
         self.frame_num = 0
 
-        # record result
-        self.record_result = False
-        # show parameter
-        self.show_FPS = False
-        self.show_kpt2D = False
-        self.show_scene3D = False
-
     def start(self):
-        
-        merge_col_num = self.cfg['merge_col_num']
-        merge_singleView_height = self.cfg['merge_singleView_height']
-        merge_singleView_width = self.cfg['merge_singleView_width']
 
-        if self.record_result:
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            MV = cv2.VideoWriter('multi_view.avi', fourcc, self.cfg['frame_rate'], (merge_singleView_width*2, merge_singleView_height*2))
-            D3V = cv2.VideoWriter('D3view.avi', fourcc, self.cfg['frame_rate'], (int(self.canvas_width), int(self.canvas_height)))
-
-        self.actors = []
+        actors = []
         self.frame_num += 1
-        
         self.show_images = self.get_show_images(self.camera_type)
         print('---------------------------------------')
         print(f'Frame num: {self.frame_num}')
@@ -55,30 +51,25 @@ class scene():
         # Stage1, get id matching and 2D pose (pixels)
         # match_list, detect_info = self.get_match_list(image_nparray)
         match_list, self.show_images, detect_info = main_algorithm.get_match_list(self.show_images,
-                                                                                self.yolov5,
-                                                                                self.pose2D,
+                                                                                self.pplDetect_model,
+                                                                                self.pose2D_model,
                                                                                 self.cam_nums,
-                                                                                merge_singleView_width,
-                                                                                merge_singleView_height,
-                                                                                merge_col_num)
+                                                                                self.merge_singleView_width,
+                                                                                self.merge_singleView_height,
+                                                                                self.merge_col_num)
         if match_list:
-            self.actors = main_algorithm.reconstruction_pose3D(self.cameras,
-                                                            self.camera_pair,
-                                                            self.pictoStruct,
-                                                            match_list,
-                                                            detect_info)
+            actors = main_algorithm.reconstruction_pose3D(self.cameras,
+                                                        self.cam_idx_pair,
+                                                        self.pictoStruct,
+                                                        match_list,
+                                                        detect_info)
 
             # res = self.recover3Dpose(image_nparray, match_list, detect_info)
 
+        return actors
 
-    def cam_info(self, rvec, tvec):
-        cam = {
-            'R': rvec,
-            't': tvec
-        }
-        return cam
 
-    def get_show_images(self, camera_type):
+    def get_show_images(self, camera_type) -> list:
         # No matter which type of camera, should have a list which collect frames with nparray type.
         image_nparray = []
 
@@ -113,7 +104,4 @@ class scene():
                 for camera in self.cameras:
                     image_nparray.append(camera.read())
 
-           
-
         return image_nparray
-            

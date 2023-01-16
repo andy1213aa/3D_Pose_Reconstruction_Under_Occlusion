@@ -97,7 +97,7 @@ def get_bone_length_prior(edges,
         return np.array(bone_length_prior_result)
         
 def get_candidate_info(actor, 
-                    videos, 
+                    cameras, 
                     detect_info, 
                     camera_pair):
         
@@ -121,14 +121,14 @@ def get_candidate_info(actor,
                 candidates_heatmap[:, cnt] = np.empty((actor.kpt_num, 64, 48))
                 continue
 
-            R_12 = videos[v1].movement[f'v{v1}v{v2}']['R']
-            t_12 = videos[v1].movement[f'v{v1}v{v2}']['t']
+            R_12 = cameras[v1].movement[f'v{v1}v{v2}']['R']
+            t_12 = cameras[v1].movement[f'v{v1}v{v2}']['t']
     
             kpt2d_1 = detect_info[v1][actor.pplIdxs[v1]]['keypoints'][:, :2]
             kpt2d_2 = detect_info[v2][actor.pplIdxs[v2]]['keypoints'][:, :2]
             
-            K_1 = videos[v1].calibration_parameter['K']
-            K_2 = videos[v2].calibration_parameter['K']
+            K_1 = cameras[v1].calibration_parameter['K']
+            K_2 = cameras[v2].calibration_parameter['K']
             
             
             points3D = triangulation(kpt2d_1, kpt2d_2, K_1, K_2, R_12, t_12)
