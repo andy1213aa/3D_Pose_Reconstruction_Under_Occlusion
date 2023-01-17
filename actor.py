@@ -13,7 +13,7 @@ def measureExcutionTime(func):
             print(f"{func.__name__} execution time: {end_: 0.4f} sec.")
     return _time_it
 
-class actor():
+class Actor():
 
     def __init__(self, pplIdxs, dataset):
         self.pplIdxs = pplIdxs # cross all cammera

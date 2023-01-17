@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from config import video_infomation
+
 from functools import wraps
 import time
 def measureExcutionTime(func):
@@ -16,14 +16,17 @@ def measureExcutionTime(func):
     
 class yolov5_model():
 
-    def __init__(self):
+    def __init__(self,
+                source_pth,
+                model_pth, 
+                source_type):
 
         #yolo setting
-        self.model = torch.hub.load('../yolov5', 
+        self.model = torch.hub.load(source_pth, 
                         'custom', 
-                        path=video_infomation['yolov5_path'], 
+                        path=model_pth, 
                         force_reload=True,
-                        source='local',
+                        source=source_type,
                         )
 
         self.model.conf = 0.7         # NMS confidence threshold
@@ -34,14 +37,14 @@ class yolov5_model():
         self.model.max_det = 1      # maximum number of detections per image
         self.model.amp = False         # Automatic Mixed Precision (AMP) inference
 
-    @measureExcutionTime
+    # @measureExcutionTime
     def __call__(self, frames):
         res = np.zeros((len(frames)))
         # Maybe try to not move to cpu.
         
-        start = time.time()
+        # start = time.time()
         gpu_out = self.model(frames).xyxy
-        print(f'yolo gpu: {time.time()-start}')
+        # print(f'yolo gpu: {time.time()-start}')
         cpu_out = []
 
         for i, g in enumerate(gpu_out):

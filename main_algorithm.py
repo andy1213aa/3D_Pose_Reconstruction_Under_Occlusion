@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import utlis
 import recover3Dpose
-import actor
+from actor import Actor
 
 def get_match_list(frames:list,
                 detection_model,
@@ -80,7 +80,7 @@ def reconstruction_pose3D(cameras,
             '''
             
             # Build actor class
-            ppl = actor(pplIdxs, 'coco')
+            ppl = Actor(pplIdxs, 'coco')
 
             # Create candidate infomation
             candidates_cams, candidates_kpts, candidates_heatmap, candidates_intrinsic = recover3Dpose.get_candidate_info(ppl, 
@@ -120,7 +120,7 @@ def reconstruction_pose3D(cameras,
             camera_pair_prior = [np.prod(heatmap_prior[:, i]) * np.prod(bone_length_prior[:, i]) for i in range(len(candidates_cams))]
             max_prior = np.argmax(camera_pair_prior)
             
-            print('Pair Camera: ', candidates_cams[max_prior])
+            # print('Pair Camera: ', candidates_cams[max_prior])
 
             ppl.set_winner_kpts(candidates_kpts[:, max_prior, :], candidates_cams[max_prior])
             actors.append(ppl)

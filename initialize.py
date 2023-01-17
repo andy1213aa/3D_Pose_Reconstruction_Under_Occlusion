@@ -7,11 +7,13 @@ import glob
 import matplotlib.pyplot as plt
 import scene
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import numpy as np
 
 def init_cameras(camera_type:str,
                 resolution_width:int,
                 resolution_height:int,
                 frame_rate:int,
+                calibration_path:str,
                 realsense_SN = None,
                 video_folder = None,
                 ipcam_rtsp = None) -> list:
@@ -39,6 +41,7 @@ def init_cameras(camera_type:str,
                 cameras.append(Camera(resolution_width,
                                     resolution_height,
                                     frame_rate,
+                                    calibration_path,
                                     camera_type,
                                     device, 
                                     idx))
@@ -54,6 +57,7 @@ def init_cameras(camera_type:str,
                 cameras.append(Camera(resolution_width,
                                     resolution_height, 
                                     frame_rate,
+                                    calibration_path,
                                     camera_type,
                                     video_reader, 
                                     idx))
@@ -66,31 +70,38 @@ def init_cameras(camera_type:str,
                 cameras.append(Camera(resolution_width,
                                     resolution_height, 
                                     frame_rate,
+                                    calibration_path,
                                     camera_type,
                                     ipcam_reader, 
                                     idx))                
          
 
     return cameras
-def init_model(config_path,
-            ckpt_path,
-            smooth_cfg,
-            pose_type,
-            cuda_idx):
+def init_model(yolo_source_pth,
+            yolo_model_pth,
+            yolo_source_type,
+            MM_config_path,
+            MM_ckpt_path,
+            MM_smooth_cfg,
+            MM_pose_type,
+            MM_cuda_idx):
     '''
     Load usage models.
     '''
 
     # Object detection model
-    yolov5 = yolov5_model()
+    # print(f'yolo_source_pth: {yolo_source_pth}')
+    yolov5 = yolov5_model(yolo_source_pth,
+                yolo_model_pth, 
+                yolo_source_type)
     print('Object detection model is loaded.')
 
     # pose2D detection model
-    pose2D = Kpts2D_Model(config_path,
-                        ckpt_path,
-                        smooth_cfg,
-                        pose_type,
-                        cuda_idx,)
+    pose2D = Kpts2D_Model(MM_config_path,
+                        MM_ckpt_path,
+                        MM_smooth_cfg,
+                        MM_pose_type,
+                        MM_cuda_idx,)
 
     print('Pose 2D detection model is loaded.')
     return yolov5, pose2D
@@ -99,8 +110,6 @@ def init_view3D():
 
     fig = plt.figure()
     canvas = FigureCanvas(fig)
-    canvas_width, canvas_height = fig.get_size_inches() * fig.get_dpi()
-    
     ax = fig.add_subplot(projection='3d')
     ax.view_init(elev = -157, azim=130)
 

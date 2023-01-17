@@ -16,7 +16,7 @@ def measureExcutionTime(func):
             print(f"{func.__name__} execution time: {end_: 0.4f} sec.")
     return _time_it
 
-@measureExcutionTime
+# @measureExcutionTime
 def batch_inference_top_down_mmpose(model, 
                                     frames, 
                                     yolo_result, 
@@ -55,7 +55,7 @@ def batch_inference_bottom_up_mmpose(model,
     detect_info = unshift_merge_bottom_up_kpt2D(merge_kpt2D, merge_heatmap, col_num, merge_singleView_height, merge_singleView_width, seperate_num)
     return kpt2D_frames, detect_info
 
-@measureExcutionTime
+# @measureExcutionTime
 def merge_images(images: list, col_num: int, merge_singleView_height: int, merge_singleView_width:int):
 
     '''
@@ -80,7 +80,7 @@ def merge_images(images: list, col_num: int, merge_singleView_height: int, merge
 
     return merge_multi_view
 
-@measureExcutionTime
+# @measureExcutionTime
 def shift_yolo_bbox(yolo_batch_result:list, col_num, merge_singleView_height, merge_singleView_width) -> np.ndarray:
 
     '''
@@ -109,7 +109,7 @@ def shift_yolo_bbox(yolo_batch_result:list, col_num, merge_singleView_height, me
             
     return np.array(result)
 
-@measureExcutionTime
+# @measureExcutionTime
 def undo_merge_image(merge_image: np.ndarray, col_num: int, merge_singleView_height: int, merge_singleView_width:int):
     merge_height, merge_width, _= merge_image.shape
     assert merge_height % merge_singleView_height == 0 and merge_width % merge_singleView_width == 0, 'Merge size is fail, please check again.'
@@ -126,7 +126,7 @@ def undo_merge_image(merge_image: np.ndarray, col_num: int, merge_singleView_hei
 
     return result
 
-@measureExcutionTime
+# @measureExcutionTime
 def unshift_merge_top_down_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
 
     result = [[] for _ in range(seperate_num)]
@@ -167,7 +167,7 @@ def unshift_merge_top_down_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int,
     # assert len(result) == len(ppl_num_ineach_view), "Error accure with kpt unshift."
     return result
     
-@measureExcutionTime
+# @measureExcutionTime
 def unshift_merge_bottom_up_kpt2D(merge_kpt2D: list, merge_heatmap, col_num: int, merge_singleView_height: int, merge_singleView_width:int, seperate_num:int)->list:
 
     result = [[] for _ in range(seperate_num)]

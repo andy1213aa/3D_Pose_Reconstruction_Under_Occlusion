@@ -1,7 +1,10 @@
 from scene import scene
-import config
+from config import Config
+from controller import StageManager
 
 if __name__ == '__main__':
-    show = scene(config.video_infomation)
-    show.scene_initialize()
-    show.start()
+    configure = Config()
+
+    SM = StageManager(configure)
+    SM.initlize()
+    SM.start()

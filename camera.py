@@ -13,6 +13,7 @@ class Camera():
                 resolution_width: int,
                 resolution_height: int,
                 frame_rate: int,
+                calibration_path:str,
                 camera_type:str,
                 device: object, 
                 idx: int):
@@ -26,10 +27,10 @@ class Camera():
         self.calibration_parameter = None
 
         # ipcam
-        self.record_single_view = True
+        self.record_single_view = False
         self.ipcam_update = True
 
-        self.camera_initialize()
+        self.camera_initialize(calibration_path)
         self._now_frame_num = -1
         self._pre_frame_num = self._now_frame_num
         self.now_frame = None

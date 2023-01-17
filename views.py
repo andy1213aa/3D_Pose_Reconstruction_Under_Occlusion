@@ -4,52 +4,69 @@ import utlis
 
 
 class Visualization():
-    def __init__(self,show_FPS,
-                show_kpt2D,
-                show_scene2D,
-                show_scene3D,
+    def __init__(self,
+                cameras: list,
+                pose2D_model,
+                show_FPS: bool,
+                show_kpt2D: bool,
+                world_view: bool,
+                show_scene2D: bool,
+                show_scene3D: bool,
+                canvas,
                 ax,
-                merge_col_num,
-                merge_singleView_height,
-                merge_singleView_width,):
+                merge_col_num: int,
+                merge_singleView_height: int,
+                merge_singleView_width: int,
+                cam_denormalize: list
+                ):
         
-        
-
+        self.pose2D_model = pose2D_model
+        self.cameras = cameras
         self.show_FPS = show_FPS
         self.show_kpt2D = show_kpt2D
-        
+        self.world_view = world_view
         self.show_scene2D = show_scene2D
         self.show_scene3D = show_scene3D
         
     
-        self.visWindow2D = cv2.namedWindow('view2D',cv2.WINDOW_NORMAL)
-        self.visWindow3D = cv2.namedWindow('view3D',cv2.WINDOW_NORMAL)
-
-        self.ax = ax
+        # self.visWindow2D = cv2.namedWindow('view2D',cv2.WINDOW_NORMAL)
+        # self.visWindow3D = cv2.namedWindow('view3D',cv2.WINDOW_NORMAL)
 
         self.merge_col_num = merge_col_num
         self.merge_singleView_height = merge_singleView_height
         self.merge_singleView_width = merge_singleView_width
+
+        self._show_images = []
+
+        self.actors = []
+        self.exec_time = 'No Given'
+
+        # view3D
+        self.canvas = canvas
+        self.canvas_width, self.canvas_height = self.canvas.get_width_height()
+        self.ax = ax
+        self.cam_denormalize = cam_denormalize
         
-        self._show_images = np.zeros((merge_singleView_height, merge_singleView_width))
-
-    def result_visualization(self, 
-                        exec_time='No Given'):
+    def result_visualization(self):
         while True:
-
+     
+            if not self._show_images:
+                continue
             if self.show_scene2D:
-                view2D = self._vis2D(self._show_images, 
-                                    exec_time)
-                cv2.imshow('view2D', view2D)
+
+                self.view2D = self._vis2D(self._show_images, 
+                                    self.exec_time)
+                cv2.imshow('view2D', self.view2D)
 
             if self.show_scene3D:
-                scene3D = self._vis3D()
-                cv2.imshow('view3D', scene3D)
+                self.view3D = self._vis3D()
+                cv2.imshow('view3D', self.view3D)
                 
             key = cv2.waitKey(1)
-            if key & 0xFF == ord('q') or key == 27:
+
+            # match key:
+            if key == ord('q') or key == ord('Q'):
                 cv2.destroyAllWindows()
-   
                 break
 
             elif key == ord('f') or key == ord('F'):
@@ -57,7 +74,7 @@ class Visualization():
 
             elif key == ord('k') or key == ord('K'):
                 self.show_kpt2D = not self.show_kpt2D
-                self.pose2D.visualization = self.show_kpt2D
+                self.pose2D_model.visualization = self.show_kpt2D
 
             elif key == ord('v') or key == ord('V'):
                 self.show_scene3D = not self.show_scene3D
@@ -67,19 +84,32 @@ class Visualization():
             # rotation
             elif key == ord('w') or key == ord('W'):
                 self.ax.elev -= 1
+
             elif key == ord('a') or key == ord('A'):
                 self.ax.azim -= 1
+
             elif key == ord('s') or key == ord('S'):
                 self.ax.elev += 1
+
             elif key == ord('d') or key == ord('D'):
                 self.ax.azim += 1        
+                
+    def update_actor(self, actor: list):
+        self.actors = actor
 
+    def update_show_images(self, new_show_images: np.ndarray):
+
+        self._show_images = new_show_images
+
+    def update_exec_time(self, exec_time:float):
+        self.exec_time = exec_time
+                
 
 
     def _vis2D(self, 
-            show_images, 
-            exec_time
-            ):
+            show_images: list, 
+            exec_time: float
+            ) -> np.ndarray:
 
         for i, view in enumerate(show_images):
             
@@ -87,17 +117,14 @@ class Visualization():
                 fps = int(1 / (exec_time))
                 cv2.putText(view, f'FPS: {fps}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 1, cv2.LINE_AA)
 
-            self.cameras[i].now_frame = view
+            # self.cameras[i].now_frame = view
         
-        merge_multi_view = utlis.merge_images(self._show_images, self.merge_col_num, self.merge_singleView_height, self.merge_singleView_width)
+        merge_multi_view = utlis.merge_images(show_images, self.merge_col_num, self.merge_singleView_height, self.merge_singleView_width)
 
-        # if record_result:
-        #     MV.write(merge_multi_view)
-        # if self.record_result:
-        #             D3V.write(scene3D)
+
         return merge_multi_view
             
-    def _vis3D(self):
+    def _vis3D(self)->np.ndarray:
 
         skeleton = [[15, 13], [13, 11], [16, 14], [14, 12], [11, 12],
                 [5, 11], [6, 12], [5, 6], [5, 7], [6, 8], [7, 9],
@@ -114,10 +141,10 @@ class Visualization():
         objp[:,:2] = np.mgrid[0:width,0:height].T.reshape(-1,2)
         objp *= 6.8
 
-        hd_cameras = [self.cam_info(self.cameras[i].calibration_parameter['R'], 
-                        self.cameras[i].calibration_parameter['t']) for i in range(len(self.cameras))]
+        hd_cameras = [{'R': self.cameras[i].calibration_parameter['R'], 
+                        't': self.cameras[i].calibration_parameter['t']} for i in range(len(self.cameras))]
 
-        if self.cfg['world_view']:
+        if self.world_view:
             # Draw selected camera subset in blue   
             for cam in hd_cameras:
                 cc = -cam['R'].transpose()@cam['t']
@@ -130,13 +157,13 @@ class Visualization():
         if self.actors:
 
             for ppl in self.actors:
-    #             kpt3d_world = self.convert_keypoint_definition(ppl.win_kpts3D)
+    #             kpt3d_world = self._convert_keypoint_definition(ppl.win_kpts3D)
                 
                 # Denormalize
-                kpt3d_world = ppl.win_kpts3D * self.cfg['cam_denormalize'][ppl.win_cam_pair[0]]
+                kpt3d_world = ppl.win_kpts3D * self.cam_denormalize[ppl.win_cam_pair[0]]
                 # transformation to world coordination
-                if self.cfg['world_view']:
-                    kpt3d_world = self.convert_keypoint_cam2world(kpt3d_world, ppl.win_cam_pair)
+                if self.world_view:
+                    kpt3d_world = self._convert_keypoint_cam2world(kpt3d_world, ppl.win_cam_pair)
 
                 for objpt in kpt3d_world:
                     self.ax.scatter(objpt[0], objpt[1], objpt[2], '.', color=[1,0,0], s=0.5)
@@ -147,17 +174,17 @@ class Visualization():
                         [kpt3d_world[skl[0]][2], kpt3d_world[skl[1]][2]])
 
         self.canvas.draw()       # draw the canvas, cache the renderer
-        scene_pltshowing = np.frombuffer(self.canvas.tostring_rgb(), dtype='uint8').reshape(int(self.canvas_height), 
-                                                                                            int(self.canvas_width), 3) 
+        scene_pltshowing = np.frombuffer(self.canvas.tostring_rgb(), dtype='uint8').reshape(self.canvas_height,
+                                                                                            self.canvas_width, 
+                                                                                            3) 
 
         # cv2.imwrite(f'vis/test_{self.frame_num}.png', scene_pltshowing)
         self.ax.cla()
         return scene_pltshowing
 
-    def update_show_images(self, new_show_images):
-        self._show_images = new_show_images
 
-    def convert_keypoint_definition(self, keypoints):
+
+    def _convert_keypoint_definition(self, keypoints):
         """Convert pose det dataset keypoints definition to pose lifter dataset
         keypoints definition.
 
@@ -180,7 +207,7 @@ class Visualization():
             keypoints[[12, 14, 16, 11, 13, 15, 0, 5, 7, 9, 6, 8, 10]]
         return keypoints_new
 
-    def convert_keypoint_cam2world(self, keypoints, cams_idx):
+    def _convert_keypoint_cam2world(self, keypoints, cams_idx):
 
         keypoints = keypoints.reshape(17, 3, 1)
         R_W = self.cameras[cams_idx[0]].calibration_parameter['R']

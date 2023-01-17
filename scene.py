@@ -40,11 +40,11 @@ class scene():
         self.cam_nums = len(cameras)
         self.frame_num = 0
 
-    def start(self):
+    def get_show_actors(self) -> list:
 
         actors = []
         self.frame_num += 1
-        self.show_images = self.get_show_images(self.camera_type)
+        self.show_images = self.get_show_images(self.cameras[0].camera_type)
         print('---------------------------------------')
         print(f'Frame num: {self.frame_num}')
         
