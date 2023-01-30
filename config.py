@@ -3,7 +3,7 @@
 class Config():
    
     cam_type = 'video'  # 'realsense', 'video', 'ipcam'
-    cam_resolution_width = 280 # (pixels)
+    cam_resolution_width = 1280 # (pixels)
     cam_resolution_height = 720  # pixels
     cam_frame_rate = 30  # fps
     cam_calibration_path = '/media/aaron/work/ITRI_SSTC/S200/anti_masking/realsense_new_4/calibration_realsense_new_4.json'
