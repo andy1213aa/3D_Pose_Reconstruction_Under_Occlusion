@@ -16,7 +16,7 @@ def measureExcutionTime(func):
             print(f"{func.__name__} execution time: {end_: 0.4f} sec.")
     return _time_it
 
-# @measureExcutionTime
+@measureExcutionTime
 def batch_inference_top_down_mmpose(model, 
                                     frames, 
                                     yolo_result, 

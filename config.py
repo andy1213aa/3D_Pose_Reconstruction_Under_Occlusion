@@ -1,7 +1,8 @@
 
 
 class Config():
-   
+    
+    Fmat_estimate = False
     cam_type = 'video'  # 'realsense', 'video', 'ipcam'
     cam_resolution_width = 1280 # (pixels)
     cam_resolution_height = 720  # pixels
@@ -64,7 +65,7 @@ class Config():
     
     #Camera idx pair
     cam_idx_pair = [[0, 1],
-                    [1, 2]
+                    [2, 3]
                     ]
     # Denormalize the tvec to world coordinate.
     # Write in fixed value now.

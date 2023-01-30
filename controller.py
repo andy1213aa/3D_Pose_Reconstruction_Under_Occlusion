@@ -90,10 +90,20 @@ class StageManager():
             # if '3D' in self.cfg.record_result:
             #     self.D3V.write(self.visualizer.view3D)
 
+    def camera_pose_calibrate(self):
+        print('Calibration start!!')
+
+        while True:
+            start = time.time()
+            self.stage.findFundamentalMat()
+
     def start(self):
         
-        vis_thread = Thread(target = self.visualizer.result_visualization,  args=())
-        vis_thread.start()
+        # vis_thread = Thread(target = self.visualizer.result_visualization,  args=())
+        # vis_thread.start()
 
-        show_thread = Thread(target = self.show,  args=())
-        show_thread.start()
+        # show_thread = Thread(target = self.show,  args=())
+        # show_thread.start()
+
+        calibrate_thread = Thread(target = self.camera_pose_calibrate, args=())
+        calibrate_thread.start()

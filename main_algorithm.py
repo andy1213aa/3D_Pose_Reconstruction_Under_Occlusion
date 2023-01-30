@@ -4,7 +4,7 @@ import utlis
 import recover3Dpose
 from actor import Actor
 
-def get_match_list(frames:list,
+def get_match_pose2D(frames:list,
                 detection_model,
                 pose_model,
                 cam_nums:int,
@@ -16,7 +16,7 @@ def get_match_list(frames:list,
         Stage 1: Matching. Get 2D pose information.
         '''
         # Stage1, get 2D pose information.
-        detect_info = []
+        detect_info = [[] for i in range(cam_nums)]
 
         for i, frame in enumerate(frames):
             frames[i] = cv2.resize(
@@ -60,7 +60,6 @@ def get_match_list(frames:list,
         single_idx[single_idx==1] = -1
         single_idx = [0]*cam_nums
         match_list = [single_idx]
-
         return match_list, kpt2D_frames, detect_info
         
 def reconstruction_pose3D(cameras,
