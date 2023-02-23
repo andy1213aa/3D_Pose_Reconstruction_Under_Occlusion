@@ -43,9 +43,14 @@ class scene():
         self.cam_nums = len(cameras)
         self.frame_num = 0
 
+        '''
+        fundamental matrix 
+        '''
         self.fundamentalMatPts = [np.zeros((1, 2), dtype=np.int32) for _ in range(len(cameras))]
-        # self.fundamentalMatPts1 = buffer(100)
-        # self.fundamentalMatPts2 = buffer(100)
+        self.minFrameIdx = [-1 for _ in range(len(cameras))]
+        self.minError = [1e+10 for _ in range(len(cameras))]
+        self.Fmat = [np.zeros((3,3)) for _ in range(len(cameras))]
+
 
     def get_show_actors(self) -> list:
 
@@ -115,6 +120,13 @@ class scene():
 
     def findFundamentalMat(self):
 
+        def Ferror(F,pts1,pts2):  # pts are Nx3 array of homogenous coordinates.  
+            # how well F satisfies the equation pt1 * F * pt2 == 0
+            vals = pts1.dot(F).dot(pts2.T)
+            err = np.abs(vals)
+            # print("avg Ferror:",np.mean(err))
+            return np.mean(err)
+
         def drawlines(img1,img2,lines,pts1,pts2):
             ''' img1 - image on which we draw the epilines for the points in img2
                 lines - corresponding epilines '''
@@ -146,31 +158,40 @@ class scene():
                                                                                 self.merge_col_num)
 
         
-
-        print(f'Info Lens: {len(detect_info)}')
-        for v1, v2 in self.cam_idx_pair:
+        for p, (v1, v2) in enumerate(self.cam_idx_pair):
             # print(len(detect_info[v1]))
             # print(len(detect_info[v2]))
             if detect_info[v1] and detect_info[v2]:
                 # Only one person, so idx fixed as 0
-                print(f'CAM: {v1} and {v2}')
+                
                 for i in range(detect_info[v1][0]['keypoints'].shape[0]):
                     if detect_info[v1][0]['keypoints'][i][2] > 0.7 and detect_info[v2][0]['keypoints'][i][2] > 0.7:
                         self.fundamentalMatPts[v1] = np.concatenate((self.fundamentalMatPts[v1], detect_info[v1][0]['keypoints'][i, :2].reshape((1, 2)).astype('int32')), axis = 0)
                         self.fundamentalMatPts[v2] = np.concatenate((self.fundamentalMatPts[v2], detect_info[v2][0]['keypoints'][i, :2].reshape((1, 2)).astype('int32')), axis = 0)
-                # self.fundamentalMatPts[v1].push(detect_info[v1][0]['keypoints'][:, :2])
-                # self.fundamentalMatPts[v2].push(detect_info[v2][0]['keypoints'][:, :2])
-
-
+                
                 pts1 = self.fundamentalMatPts[v1][1:, :].copy()
                 pts2 = self.fundamentalMatPts[v2][1:, :].copy()
+                
                 if pts1.shape[0] > 8:
                     # print(f'pts1: {pts1}')
                     # print(f'pts2: {pts2}')
                     F, mask = cv2.findFundamentalMat(pts1, pts2, cv2.FM_LMEDS)
-                    print(F)
-                    # pts1 = pts1[mask.ravel()==1]
-                    # pts2 = pts2[mask.ravel()==1]
+
+                    error = Ferror(F, 
+                                np.concatenate((pts1, np.ones((pts1.shape[0], 1))), axis=1).astype(np.float32),
+                                np.concatenate((pts2, np.ones((pts2.shape[0], 1))), axis=1).astype(np.float32))
+
+                    # 
+                    if error <  self.minError[p] and self.frame_num > 200:
+                        self.minError[p] = error
+                        self.minFrameIdx[p] = self.frame_num
+                        self.Fmat[p] = F
+                        
+                        print(f'Frame Number: {self.frame_num}')
+                        print(f'CAM: {v1} and {v2}')
+                        print(f'Fundamental Error: {error: .4f}')
+                        print(f'Fundamental matrix: {F}')
+
                     # Find epilines corresponding to points in right image (second image) and
                     # drawing its lines on left image
                     if pts1.shape[0] > 20:
@@ -191,6 +212,6 @@ class scene():
 
                     if key == 27:
                         break
-                
+        
 
 

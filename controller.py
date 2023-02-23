@@ -107,3 +107,4 @@ class StageManager():
 
         calibrate_thread = Thread(target = self.camera_pose_calibrate, args=())
         calibrate_thread.start()
+        

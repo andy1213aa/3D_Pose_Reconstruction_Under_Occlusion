@@ -103,7 +103,7 @@ def get_candidate_info(actor,
         
         '''
         output: 17xnx3
-        '''
+        ''' 
         
         cnt = 0
         candidates_intrinsic = np.zeros((actor.kpt_num, len(camera_pair), 3, 3))
